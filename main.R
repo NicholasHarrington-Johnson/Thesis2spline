@@ -1,20 +1,17 @@
 ## Call all file
 rm(list=ls())
+
 ## Loading packages
 
 source("packages.R")
-
-## Loading functions
-
-source("function.R")
 
 ## Reading data
 
 eztable <- fread("booking_top30_restaurants_all.txt")
 
-## Changing working directory
+## Loading functions
 
-setwd("~/GitHub/ThesisCode")
+source("function.R")
 
 ## Public Holidays
 phols <- fread("Public_Holidays_Scaled.csv")
