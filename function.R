@@ -516,21 +516,27 @@ arimamodel <- function(tri, h=7){
 
 ## Plotting function
 
-plotpub <- function(y,xd,xu,xny,name)
+plotpub <- function(frame,name)
 {
   ## This function plots the total people attending a restaurant booking with public holidays data
   # Public holidays expected to increase the number of people are marked as blue 
   # Public holidays expected to decrease the number of people are marked as red
   # New Year's Eve is marked as green
   
+  y <- ts(frame$X0,frequency =365)
+  tsp(y) <- tsp(frame$pubd)
+  xd <- frame$pubd
+  xu <- frame$pubi
+  xny <- frame$pubny
+  
   logpd <- ts(as.logical(xd))
   tsp(logpd) <- tsp(xd)
   
   logpu <- ts(as.logical(xu))
-  tsp(logpu) <- tsp(xu)
+  tsp(logpu) <- tsp(xd)
   
   logpny <- ts(as.logical(xny))
-  tsp(logpny) <- tsp(xny)
+  tsp(logpny) <- tsp(xd)
   
   plot(y,main=paste("Restaurant",name),  xlab="Year", ylab="Total people booked")
   points(time(logpd)[logpd],(y)[logpd],col="red",pch=19)

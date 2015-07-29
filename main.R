@@ -1,20 +1,17 @@
 ## Call all file
 rm(list=ls())
+
 ## Loading packages
 
 source("packages.R")
-
-## Loading functions
-
-source("function.R")
 
 ## Reading data
 
 eztable <- fread("booking_top30_restaurants_all.txt")
 
-## Changing working directory
+## Loading functions
 
-setwd("~/GitHub/ThesisCode")
+source("function.R")
 
 ## Public Holidays
 phols <- fread("Public_Holidays_Scaled.csv")
@@ -32,7 +29,7 @@ tr <- truncatep(r)
 
 for(i in 1:16)
 {
-  plotpub(tr[[i]]$X0,tr[[i]]$pubd,tr[[i]]$pubi,tr[[i]]$pubny,i)
+  plotpub(tr[[i]],i)
 }
 
 ## Best overall model
@@ -44,7 +41,8 @@ print(out)
 
 for (i in 1:16)
 {
-  arimah(tr[[i]],7)
+  nam <- paste("Restaurant_", i, sep = "")
+  assign(nam, arimah(tr[[i]],7))
 }
 
 ## Multiple previous data points with splines
