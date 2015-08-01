@@ -135,7 +135,7 @@ oldbdata <- function(P,h){
   
   # People booked for day 0
   
-  totpeople <- P[(max(h1,h2)+1):nrow(P),"X0"]
+  totpeople <- P[(max(h1,h2)+1):nrow(P),"b_t0"]
   
   # People booked h days ago
   
@@ -180,7 +180,7 @@ oldbdata1h <- function(P,h1=7){
   
   # People booked for day 0
   
-  totpeople <- P[(h1+1):nrow(P),"X0"]
+  totpeople <- P[(h1+1):nrow(P),"b_t0"]
   
   # People booked h days ago
   
@@ -230,11 +230,23 @@ truncata <- function(frame, prop=0.05,prope=0.05)
   
   # Assign new dimensions
   
-  data1 <- frame[lower:upper,]
+  data1 <- frame[lower:upper,1:15]
+  data2<-matrix(0L,(nrow(data1)-14),15)
+  for (i in 1:15){
+    data2[,i] <- data1[(15-i+1):(nrow(data1)-i+1),paste("X",toString(i-1),sep="")]
+  }
   
-  data1$pubd <- ts(frame$pubd,start=starting,end=ending,frequency=365)
+  colnames(data2)<-paste("b_t",((1:15)-1),sep="")
   
-  return(data1)
+  data2 <- cbind(data2,frame[(lower+14):upper,c("pubd","pubi","pubny")])
+  starting <- starting+(14/365)
+  data2$pubd <- ts(data2$pubd,start=starting,frequency=365)
+  data2$pubi <- ts(data2$pubi,start=starting,frequency=365)
+  data2$pubny <- ts(data2$pubny,start=starting,frequency=365)
+  
+  #if (tsp(data2$pubd)[2]!=ending) {print("Error on the dimensions front")}
+  
+  return(data2)
   
 }
 
@@ -252,7 +264,7 @@ truncatep <- function(r)
   tr <- list()
   
   # Truncate 5% plus any additional manual inspection requires
-  prop <- rep(0.05,16)
+  prop <- rep(0.05,30)
   prope <- prop
   # Manual Inspection
   prope[1] <- 0.06
@@ -260,12 +272,12 @@ truncatep <- function(r)
   prope[8] <- 0.08
   prope[10] <- 0.12
   prope[15] <- 0.1
-  #prope[20] <- 0.35
-  #prope[22] <- 0.07
-  #prope[23] <- 0.16
-  #prope[25] <- 0.18
+  prope[20] <- 0.35
+  prope[22] <- 0.07
+  prope[23] <- 0.16
+  prope[25] <- 0.18
   # Truncating data
-  for(i in 1:16)
+  for(i in numr)
   {
     tr[[i]]<-truncata(r[[i]], prop[i],prope[i])
   }
@@ -279,16 +291,16 @@ truncatep <- function(r)
 ##########################################################
 clean <- function(eztable)
 {
-  # Read in data for resaurants 1 to 16
+  # Read in data for resaurants 1 to 30
   r <- list()
   
-  for(i in 1:16)
+  for(i in 1:30)
   {
     print(paste("reading restaurant",i))
     r[[i]] <- readfunction(i)
   }
   # Plot all data
-  for(i in 1:16)
+  for(i in 1:30)
   {
     plot.ts(r[[i]]$X0, main=paste("Restaurant",i))
   }
@@ -301,7 +313,7 @@ clean <- function(eztable)
 ##########################################################
 
 ## Arimamodel applies different arima models to data
-arimamodel <- function(tri, h=7){
+arimamodel <- function(tri, h=14){
   # This function employs 5 different models that use a log of the total people attending a restaurant
   # Zeros have been accounted for by adding 1 to the data
   # Data has weekly frequency
@@ -309,8 +321,8 @@ arimamodel <- function(tri, h=7){
   ##### Creating and Organising Data ######
   #########################################
   
-  totpeople <- tri$X0
-  tsp(totpeople) <- tsp(tri$pubd)
+  totpeople <- tri$b_t0
+  
   # Creating log of data with weekly frequency
   
   logpeople <- ts(log(totpeople+1), start=1, frequency=7)
@@ -376,7 +388,7 @@ arimamodel <- function(tri, h=7){
   fc1$mean <- exp(fc1$mean)-1
   fc1$lower <- exp(fc1$lower)-1
   fc1$upper <- exp(fc1$upper)-1
-  fc1$x <- tri$X0
+  fc1$x <- tri$b_t0
   tsp(fc1$x) <- tsp(tri$pubd)
   fc1$mean <- ts(fc1$mean, start = tsp(fc1$x)[2]+1/365, frequency=365)
   tsp(fc1$upper) <- tsp(fc1$lower) <- tsp(fc1$mean)
@@ -396,7 +408,7 @@ arimamodel <- function(tri, h=7){
   fc2$mean <- exp(fc2$mean)-1
   fc2$lower <- exp(fc2$lower)-1
   fc2$upper <- exp(fc2$upper)-1
-  fc2$x <- tri$X0
+  fc2$x <- tri$b_t0
   tsp(fc2$x) <- tsp(tri$pubd)
   fc2$mean <- ts(fc2$mean, start = tsp(fc2$x)[2]+1/365, frequency=365)
   tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
@@ -416,7 +428,7 @@ arimamodel <- function(tri, h=7){
   fc3$mean <- exp(fc3$mean)-1
   fc3$lower <- exp(fc3$lower)-1
   fc3$upper <- exp(fc3$upper)-1
-  fc3$x <- tri$X0
+  fc3$x <- tri$b_t0
   tsp(fc3$x) <- tsp(tri$pubd)
   fc3$mean <- ts(fc3$mean, start = tsp(fc3$x)[2]+1/365, frequency=365)
   tsp(fc3$upper) <- tsp(fc3$lower) <- tsp(fc3$mean)
@@ -436,7 +448,7 @@ arimamodel <- function(tri, h=7){
   fc4$mean <- exp(fc4$mean)-1
   fc4$lower <- exp(fc4$lower)-1
   fc4$upper <- exp(fc4$upper)-1
-  fc4$x <- tri$X0
+  fc4$x <- tri$b_t0
   tsp(fc4$x) <- tsp(tri$pubd)
   fc4$mean <- ts(fc4$mean, start = tsp(fc4$x)[2]+1/365, frequency=365)
   tsp(fc4$upper) <- tsp(fc4$lower) <- tsp(fc4$mean)
@@ -455,7 +467,7 @@ arimamodel <- function(tri, h=7){
   fc5$mean <- exp(fc5$mean)-1
   fc5$lower <- exp(fc5$lower)-1
   fc5$upper <- exp(fc5$upper)-1
-  fc5$x <- tri$X0
+  fc5$x <- tri$b_t0
   tsp(fc5$x) <- tsp(tri$pubd)
   fc5$mean <- ts(fc5$mean, start = tsp(fc5$x)[2]+1/365, frequency=365)
   tsp(fc5$upper) <- tsp(fc5$lower) <- tsp(fc5$mean)
@@ -523,7 +535,7 @@ plotpub <- function(frame,name)
   # Public holidays expected to decrease the number of people are marked as red
   # New Year's Eve is marked as green
   
-  y <- ts(frame$X0,frequency =365)
+  y <- ts(frame$b_t0,frequency =365)
   tsp(y) <- tsp(frame$pubd)
   xd <- frame$pubd
   xu <- frame$pubi
@@ -556,9 +568,9 @@ bmod <- function(tr)
   rmodels <- list()
   rwins <- list()
   
-  # Modeling all 16 restaurants with 5 different models
+  # Modeling all restaurants with 5 different models
   # Loop returns model with lowest AICC
-  for (i in 1:16)
+  for (i in numr)
   {
     rmodels[[i]] <- arimamodel(tr[[i]])
     rwins[[i]] <- rmodels[[i]][[1]]
@@ -567,11 +579,11 @@ bmod <- function(tr)
   
   # Loop shows which model performed best overall
   rwintot <- rwins[[1]]
-  for (i in 2:16)
+  for (i in numr[-1])
   {
     rwintot <- rwins[[i]]+rwintot
   }
-  rwintot <- rwintot/16
+  rwintot <- rwintot/29
   
   return(rwintot)
 }
@@ -661,7 +673,7 @@ arimah <- function(Ptri,h=7)
   fc2$mean <- exp(fc2$mean)-1
   fc2$lower <- exp(fc2$lower)-1
   fc2$upper <- exp(fc2$upper)-1
-  fc2$x <- ts(Ptri$X0,frequency=365)
+  fc2$x <- ts(Ptri$b_t0,frequency=365)
   tsp(fc2$x)<-tsp(Ptri$pubd)
   fc2$x <- window(fc2$x,end=tsp(tri$pubd)[2])
   fc2$x <- window(fc2$x,start=tsp(tri$pubd)[1])

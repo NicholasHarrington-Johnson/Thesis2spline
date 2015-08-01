@@ -18,7 +18,7 @@ phols <- fread("Public_Holidays_Scaled.csv")
 phols <- readph(phols)
 
 ## Bookings
-
+numr <- c(1:30)[-17]
 r <- clean(eztable)
 
 ## Truncating data
@@ -27,7 +27,7 @@ tr <- truncatep(r)
 
 ## Plotting
 
-for(i in 1:16)
+for(i in restaurants)
 {
   plotpub(tr[[i]],i)
 }
@@ -39,7 +39,7 @@ print(out)
 
 ## Modelling using booking numbers from 1 weeks ago
 
-for (i in 1:16)
+for (i in restaurants)
 {
   nam <- paste("Restaurant_", i, sep = "")
   assign(nam, arimah(tr[[i]],7))
