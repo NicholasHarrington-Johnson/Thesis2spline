@@ -120,98 +120,6 @@ readfunction <- function(rstnum,startdate=0,enddate=9999,h=7)
 #################### End of Function #####################
 ##########################################################
 ##########################################################
-oldbdata <- function(P,h){
-  h1 <- h[1]
-  h2 <- h[2]
-  
-  pubd <- P$pubd
-  tsp(pubd) <- tsp(P$pubd)
-  pubi <- P$pubi
-  tsp(pubi) <- tsp(P$pubd)
-  pubny <- P$pubny
-  tsp(pubny) <- tsp(P$pubd)
-  
-  #################################################################
-  
-  # People booked for day 0
-  
-  totpeople <- P[(max(h1,h2)+1):nrow(P),"b_t0"]
-  
-  # People booked h days ago
-  
-  Ph1 <- P[((max(h1,h2)+1)-h1):(nrow(P)-h1),paste("X",toString(h1),sep="")]
-  Ph2 <- P[1:(nrow(P)-h2),paste("X",toString(h2),sep="")]
-  ph1 <- ts(Ph1)
-  ph2 <- ts(Ph2)
-  
-  #################################################################
-  
-  # Truncated due to unusual data patterns at ends
-  # Further truncation occurs with truncata.R function
-  
-  startdate <- max(0+(max(h1,h2)/365), tsp(pubd)[1]+(max(h1,h2)/365))
-  enddate <- min(9999, tsp(pubd)[2])
-  totpeople <- ts(totpeople,start = startdate, frequency = 365)
-  totpeople <- window(totpeople,end=enddate)
-  pubd <- window(pubd,start=startdate)
-  pubi <- window(pubi,start=startdate)
-  pubny <- window(pubny,start=startdate)
-  tsp(ph1) <- tsp(ph2) <- tsp(totpeople)
-  # Return time series  
-  obj <- data.frame(totpeople,ph1,ph2,pubd,pubi,pubny)
-  return(obj)
-}
-
-##########################################################
-##########################################################
-#################### End of Function #####################
-##########################################################
-##########################################################
-oldbdata1h <- function(P,h1=7){
-  
-  pubd <- P$pubd
-  tsp(pubd) <- tsp(P$pubd)
-  pubi <- P$pubi
-  tsp(pubi) <- tsp(P$pubd)
-  pubny <- P$pubny
-  tsp(pubny) <- tsp(P$pubd)
-  
-  #################################################################
-  
-  # People booked for day 0
-  
-  totpeople <- P[(h1+1):nrow(P),"b_t0"]
-  
-  # People booked h days ago
-  
-  Ph1 <- P[1:(nrow(P)-h1),paste("X",toString(h1),sep="")]
-  ph1 <- ts(Ph1)
-  
-  #################################################################
-  
-  # Truncated due to unusual data patterns at ends
-  # Further truncation occurs with truncata.R function
-  
-  startdate <- max(0+(h1/365), tsp(pubd)[1]+(h1/365))
-  enddate <- min(9999, tsp(pubd)[2])
-  totpeople <- ts(totpeople,start = startdate, frequency = 365)
-  totpeople <- window(totpeople,end=enddate)
-  pubd <- window(pubd,start=startdate)
-  pubi <- window(pubi,start=startdate)
-  pubny <- window(pubny,start=startdate)
-  tsp(ph1) <-  tsp(totpeople)
-  # Return time series  
-  obj <- data.frame(totpeople,ph1,pubd,pubi,pubny)
-  return(obj)
-}
-
-
-##########################################################
-##########################################################
-#################### End of Function #####################
-##########################################################
-##########################################################
-
 
 ## Truncata truncates data
 
@@ -689,8 +597,8 @@ arimah <- function(Ptri,h=7)
 ##########################################################
 ##########################################################
 
-choose_k <- function(h,k,P)
-  ## This function returns the AICC for a given knot using TWO LINEAR splines in an arima model using public holidays and previous bookings data
+choose_k1k1h <- function(k,P,h=7)
+  ## This function returns the AICC for a given knot using ONE LINEAR spline in an arima model using public holidays and previous bookings data
 {  
   # Zeros have been accounted for by adding 1 to the data
   # Data has weekly frequency
@@ -698,33 +606,31 @@ choose_k <- function(h,k,P)
   ##### Creating and Organising Data ######
   #########################################
   
-  data <- oldbdata(P,h)
-  
   # Creating log of data with weekly frequency
   
-  logpeople <- ts(log(data$totpeople+1), start=1, frequency=7)
+  logpeople <- ts(log(P$b_t0+1), start=1, frequency=7)
   
   # Create splinetastics
-  
-  splinetastic1 <- data$ph1-k[1]
+  splinek0 <- P[(h+1)]
+  splinetastic1 <- splinek0-k[1]
   splinetastic1[splinetastic1<0]=0
   
   ########################################################
   
-  splinetastic2 <- data$ph2-k[2]
-  splinetastic2[splinetastic2<0]=0
+  #splinetastic2 <- P[(h2+1)]-k[2]
+  #splinetastic2[splinetastic2<0]=0
   
   #########################################################
   
-  xdums <- cbind(as.numeric(data$pubd),as.numeric(data$pubi),as.numeric(data$pubny),as.numeric(splinetastic1),as.numeric(splinetastic2))
+  xdums <- cbind(as.numeric(P$pubd),as.numeric(P$pubi),as.numeric(P$pubny),splinek0,splinetastic1)
   
-  colnames(xdums) <- c("going down","going up","ny","spline1","spline2")
+  colnames(xdums) <- c("going down","going up","ny",paste("b_t",toString(h),sep=""),paste("spline with knot",toString(k)))
   
   #########################################################
   
   fit <- auto.arima(logpeople, xreg=xdums)
   
-  aicc <- fit#$aicc
+  aicc <- fit$aicc
   return(aicc)
 }
 

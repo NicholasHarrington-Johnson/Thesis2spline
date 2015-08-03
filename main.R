@@ -27,7 +27,7 @@ tr <- truncatep(r)
 
 ## Plotting
 
-for(i in restaurants)
+for(i in numr)
 {
   plotpub(tr[[i]],i)
 }
@@ -39,18 +39,18 @@ print(out)
 
 ## Modelling using booking numbers from 1 weeks ago
 
-for (i in restaurants)
-{
-  nam <- paste("Restaurant_", i, sep = "")
-  assign(nam, arimah(tr[[i]],7))
-}
+#for (i in restaurants)
+#{
+#  nam <- paste("Restaurant_", i, sep = "")
+#  assign(nam, arimah(tr[[i]],7))
+#}
 
 ## Multiple previous data points with splines
-h <- c(1,7)
-k <- c(18,30)
-aicc <- choose_k(h,k,tr[[3]])
-print(aicc)
+#h <- c(1,7)
+#k <- c(18,30)
+#aicc <- choose_k(h,k,tr[[3]])
+#print(aicc)
 
 ## atm using choose_k with only one input but it would be easier to get optim to recognise multiple inputs and only change one. investigate when this works
 
-optim(10,choose_k)
+#optim(10,choose_k)
