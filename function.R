@@ -612,7 +612,7 @@ choose_k1k1h <- function(k,P,h=7)
   
   # Create splinetastics
   splinek0 <- P[(h+1)]
-  splinetastic1 <- splinek0-k[1]
+  splinetastic1 <- splinek0-k
   splinetastic1[splinetastic1<0]=0
   
   ########################################################
@@ -639,6 +639,55 @@ choose_k1k1h <- function(k,P,h=7)
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
+choose_k2k1h <- function(k,P,h=7)
+  ## This function returns the AICC for TWO given knots using ONE LINEAR spline in an arima model using public holidays and previous bookings data
+{  
+  # Zeros have been accounted for by adding 1 to the data
+  # Data has weekly frequency
+  #########################################
+  ##### Creating and Organising Data ######
+  #########################################
+  
+  # Check that k is in order
+  if (k[1]>k[2]){return(1e20)}
+  
+  # Creating log of data with weekly frequency
+  
+  logpeople <- ts(log(P$b_t0+1), start=1, frequency=7)
+  
+  # Create splinetastics
+  splinek0 <- P[(h+1)]
+  splinetastic1 <- splinek0-k[1]
+  splinetastic1[splinetastic1<0]=0
+  
+  ########################################################
+  
+  splinetastic2 <- splinek0-k[2]
+  splinetastic2[splinetastic2<0]=0
+  
+  #########################################################
+  
+  xdums <- cbind(as.numeric(P$pubd),as.numeric(P$pubi),as.numeric(P$pubny),splinek0,splinetastic1,splinetastic2)
+  
+  colnames(xdums) <- c("going down","going up","ny",
+                       paste("b_t",toString(h),sep=""),
+                       paste("spline with knot",toString(k[1])),paste("spline with knot",toString(k[2])))
+  
+  #########################################################
+  
+  fit <- auto.arima(logpeople, xreg=xdums)
+  
+  aicc <- fit$aicc
+  return(aicc)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
 
 readph <- function(phols){
   
