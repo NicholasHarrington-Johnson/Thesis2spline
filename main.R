@@ -39,18 +39,25 @@ print(out)
 
 ## Modelling using booking numbers from 1 weeks ago
 
-#for (i in restaurants)
-#{
-#  nam <- paste("Restaurant_", i, sep = "")
-#  assign(nam, arimah(tr[[i]],7))
-#}
+for (i in numr)
+{
+  nam <- paste("Restaurant_", i, sep = "")
+  assign(nam, arimah(tr[[i]],7))
+}
 
-## Multiple previous data points with splines
-#h <- c(1,7)
-#k <- c(18,30)
-#aicc <- choose_k(h,k,tr[[3]])
-#print(aicc)
+## Splines
 
-## atm using choose_k with only one input but it would be easier to get optim to recognise multiple inputs and only change one. investigate when this works
+# One knot
+# Using restaurant 1
+k1 <- 15
+k1 <- optim(k1,choose_k1k1h,"Nelder Mead",tr[[1]])
 
-#optim(10,choose_k)
+# Two knots
+k2 <- c(14,158)
+k2 <- optim(k2,choose_k2k1h,"Nelder Mead",tr[[1]])
+
+if (k1$value < k2$value){
+  print(paste("One knot is better than two, found using knots at",toString(k1$par)))
+} else {
+  print(paste("Two knots are better than one, found using knots at",toString(k2$par)))
+}

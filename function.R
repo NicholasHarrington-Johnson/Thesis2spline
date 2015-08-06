@@ -503,7 +503,7 @@ bmod <- function(tr)
 ##########################################################
 ##########################################################
 
-arimah <- function(Ptri,h=7)
+arimah <- function(tri,h=7)
 {
   ## This function employs an arima model with public holidays and booking information from one unique time period ago (i.e. 14 days)
   
@@ -513,9 +513,7 @@ arimah <- function(Ptri,h=7)
   ##### Creating and Organising Data ######
   #########################################
   
-  tri <- oldbdata1h(Ptri,h)
-  
-  totpeople <- tri$totpeople
+  totpeople <- tri$b_t0
   
   tsp(totpeople) <- tsp(tri$pubd)
   
@@ -525,7 +523,7 @@ arimah <- function(Ptri,h=7)
   
   # Create x regressor public holiday dummies
   
-  xdums <- cbind(as.numeric(tri$pubd),as.numeric(tri$pubi),as.numeric(tri$pubny),as.numeric(tri$ph1))
+  xdums <- cbind(as.numeric(tri$pubd),as.numeric(tri$pubi),as.numeric(tri$pubny),tri[(h+1)])
   
   colnames(xdums) <- c("going down","going up","ny","previous_bookings1")
   
@@ -541,7 +539,7 @@ arimah <- function(Ptri,h=7)
   # Dimensions - start when y series ends
   endw <- tail(time(totpeople),n=h+1)
   # Bookings information
-  fph1 <- tri$ph1
+  fph1 <- ts(tri[(h+1)],start=tsp(tri$pubd)[1],end=tsp(tri$pubd)[2],frequency = 365)
   # Begin at end[[1]] of y series
   fph1 <- window(fph1,start=endw[[1]]+(1/365))
   
@@ -581,8 +579,8 @@ arimah <- function(Ptri,h=7)
   fc2$mean <- exp(fc2$mean)-1
   fc2$lower <- exp(fc2$lower)-1
   fc2$upper <- exp(fc2$upper)-1
-  fc2$x <- ts(Ptri$b_t0,frequency=365)
-  tsp(fc2$x)<-tsp(Ptri$pubd)
+  fc2$x <- ts(tri$b_t0,frequency=365)
+  tsp(fc2$x)<-tsp(tri$pubd)
   fc2$x <- window(fc2$x,end=tsp(tri$pubd)[2])
   fc2$x <- window(fc2$x,start=tsp(tri$pubd)[1])
   fc2$mean <- ts(fc2$mean, start = tsp(fc2$x)[2]+1/365, frequency=365)
@@ -607,6 +605,10 @@ choose_k1k1h <- function(k,P,h=7)
   #########################################
   
   # Creating log of data with weekly frequency
+  
+  if (k>=max(P[(h+1)])|k<1){
+    return(1e20)
+  }
   
   logpeople <- ts(log(P$b_t0+1), start=1, frequency=7)
   
@@ -650,7 +652,16 @@ choose_k2k1h <- function(k,P,h=7)
   #########################################
   
   # Check that k is in order
-  if (k[1]>k[2]){return(1e20)}
+  if (k[1]>=k[2] | k[1]<1){return(1e20)}
+
+  
+  if (k[1]>=max(P[(h+1)])){
+    return(1e20)
+  }
+  
+  if (k[2]>=max(P[(h+1)])){
+    return(1e20)
+  }
   
   # Creating log of data with weekly frequency
   
