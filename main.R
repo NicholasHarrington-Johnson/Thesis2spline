@@ -61,3 +61,10 @@ if (k1_19$value < k2_19$value){
 } else {
   print(paste("Two knots are better than one, found using knots at",toString(k2_19$par)))
 }
+
+rstnum <-5
+plotpub(tr[[rstnum]],rstnum)
+out <- mseevaluate(tr[[rstnum]],starttraining=400)
+
+print(out[[1]])
+plotmse(out[[2]])

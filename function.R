@@ -1021,3 +1021,110 @@ arimaspline <- function(P,h=7,k=1){
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
+mseevaluate <- function(P,starttraining=200,h=7){
+  
+  ## This function evaluates the mean squared error of various models and outputs the best performing model
+  ## This function also outputs the actual mean squared errors as size of the training set increases
+  
+  # There is some issue with starttraining not being large enough for some of the arima models, this ranges from 200 - 350
+  # This code takes some time to run
+  
+  bmod <- rep(0,4)
+  names(bmod) <- c("Pickup","Arima with Public Holidays","Arima with Public Holidays and k=1","Arima with Public Holidays and k=2")
+  msepick2 <- rep(0,((nrow(P)-h)-starttraining))
+  msearim2 <- msepick2
+  msearims2 <- msepick2
+  msearimsp12 <- msepick2
+  
+  len <- nrow(P)-h
+  numit <- len - starttraining
+  
+  for (size in starttraining:len){
+    
+    tot <- head(P,n=size+h)
+    tot$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[1]+((size+h-1)/365)),frequency=365)
+    
+    #training <- head(tot,n=size)
+    #training$pubd <- window(tot$pubd,start=tsp(tot$pubd)[1],end=(tsp(tot$pubd)[1]+((size-1)/365)),frequency=365)
+    
+    test <- tail(tot,n=h)
+    test$pubd <- window(tot$pubd,start=(tsp(tot$pubd)[1]+((size)/365)),end=tsp(tot$pubd)[2],frequency=365)
+    
+    pick2 <- fpickup(tot)
+    
+    arim2 <- arimaphf(tot)
+    
+    arims2 <- arimaspline(tot)
+    
+    arimsp12 <- arimaspline(tot,k=2)
+    
+    msepick2[(size-starttraining+1)] <- sum((pick2 - test$b_t0)^2)
+    
+    msearim2[(size-starttraining+1)] <- sum((arim2$mean - test$b_t0)^2)
+    
+    msearims2[(size-starttraining+1)] <- sum((arims2$mean - test$b_t0)^2)
+    
+    msearimsp12[(size-starttraining+1)] <- sum((arimsp12$mean - test$b_t0)^2)
+    
+    mse <- c(msepick2[(size-starttraining+1)],msearim2[(size-starttraining+1)],msearims2[(size-starttraining+1)],msearimsp12[(size-starttraining+1)])
+    
+    if (min(mse) == msepick2[(size-starttraining+1)]){
+      bmod <- bmod + c(1,0,0,0)
+    } else if (min(mse)==msearim2[(size-starttraining+1)]){
+      bmod <- bmod + c(0,1,0,0)
+    } else if (min(mse)==msearims2[(size-starttraining+1)]){
+      bmod <- bmod + c(0,0,1,0)
+    } else if (min(mse)==msearimsp12[(size-starttraining+1)]){
+      bmod <- bmod + c(0,0,0,1)
+    }
+    
+    if (size == (ceiling(numit/5)+starttraining)){
+      print("20% complete")
+    }
+    
+    if (size == (ceiling(numit/2.5)+starttraining)){
+      print("40% complete")
+    }
+    
+    if (size == (ceiling(3*numit/5)+starttraining)){
+      print("60% complete")
+    }
+    
+    if (size == (ceiling(4*numit/5)+starttraining)){
+      print("80% complete")
+    }
+    
+  }
+  mses <- data.frame(msepick2,msearim2,msearims2,msearimsp12)
+  bmod <- bmod/numit
+  obj <- list(bmod,mses)
+  return(obj)
+}
+
+
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+plotmse <- function(data){
+  ## This function plots the mean squared error of various models as training set size increases
+  colz <- c("blue","red","black","green")
+  y <- ts(data$msepick2,start=1)
+  par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
+  plot(y,col=colz[1],ylim=c(0,max(data)),xlab="Size of Training Set",ylab="Mean Squared Error")
+  lines(data$msearim2,col=colz[2])
+  lines(data$msearims2,col=colz[3])
+  lines(data$msearimsp12,col=colz[4])
+  title(main="Mean Squared Error of Models")
+  legend("topright",inset=c(-0.35,0), legend=c("Pickup","Arima PH","Arima PH k=1","Arima PH k=2"),col=colz,pch=19)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
