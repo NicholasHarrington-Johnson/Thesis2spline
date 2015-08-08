@@ -729,3 +729,103 @@ readph <- function(phols){
 #################### End of Function #####################
 ##########################################################
 ##########################################################
+
+pickup <- function(P,h=7){
+  ## This function runs a pickup method on bookings of total people to forecast bookings for h=7 days in advance
+  ## It outputs the grossing up factors for h days in advance
+  
+  # Start by taking log+1
+  
+  logP <- P+1
+  
+  for (i in 1:(h+1)){
+    logP[i] <- log(logP[i])
+  }
+  
+  # Vector of grossing up factors
+  
+  dev <- colSums(logP)
+  
+  adev <- rep(0,h)
+  
+  for (i in 1:h){
+    adev[i] <- dev[i]-dev[(i+1)]
+  }
+  
+  adev <- adev/nrow(logP)
+  
+  return(adev)
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+fpickup <- function(P,h=7){
+  ## This function outputs a forecast for h days using tr data
+  ## It employs the use of pickup.R to find logarithmic additive (multiplicative) development factors
+  adev <- pickup(P,h)
+  
+  lastdays <- tail(P,h)
+  lastdays <- lastdays +1
+  lastdays <- log(lastdays)
+  
+  # Create a logical upper triangle matrix
+  tmp <- upper.tri(lastdays[,1:(h+1)],diag=FALSE)
+  
+  # Create an upper triangle matrix of logged bookings
+  
+  logu <- tmp*lastdays[,1:(h+1)]
+  
+  # Create a matrix for development factors
+  tmpl <- matrix(0,nrow=nrow(logu),ncol=ncol(logu))
+  
+  for (i in 1:nrow(tmpl)){
+    tmpl[,i] <- tmpl[,i]+adev[i]
+  }
+  
+  ltmpl <- lower.tri(lastdays[,1:(h+1)],diag=TRUE)
+  
+  tmpl <- tmpl * ltmpl
+  
+  # Cumulate gross up factors
+  
+  tmpl <- t(apply(tmpl,1,function(x){rev(cumsum(rev(x)))}))
+  
+  # Incorporate existing bookings information into cumulative matrix
+  
+  bdat <- logu[row(logu)+1==col(logu)]
+  
+  ctmp <- lower.tri(lastdays[,1:(h+1)],diag=TRUE)
+  
+  btmpl <- matrix(0,nrow=nrow(logu),ncol=ncol(logu))
+  for (i in 1:nrow(btmpl)){
+    btmpl[i,] <- btmpl[i,]+bdat[i]
+  }
+  
+  btmpl <- btmpl * ctmp
+  
+  logu <- logu+btmpl 
+  
+  # Apply grossing up factors
+  fb <- tmpl + logu
+  
+  # Forecast for 1:h days ahead
+  
+  fb_t0 <- fb$b_t0
+  
+  # Return data to actual people booked
+  
+  fb_t0 <- exp(fb_t0)-1
+  
+  return(fb_t0)
+}
+
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################

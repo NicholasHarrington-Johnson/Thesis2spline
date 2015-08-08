@@ -49,15 +49,15 @@ for (i in numr)
 
 # One knot
 # Using restaurant 1
-k1 <- 15
-k1 <- optim(k1,choose_k1k1h,"Nelder Mead",tr[[1]])
+k1_19 <- 15
+k1_19 <- optim(k1_19,choose_k1k1h,"Nelder Mead",tr[[19]])
 
 # Two knots
-k2 <- c(14,158)
-k2 <- optim(k2,choose_k2k1h,"Nelder Mead",tr[[1]])
+k2_19 <- c(14,50)
+k2_19 <- optim(k2_19,choose_k2k1h,"Nelder Mead",tr[[19]])
 
-if (k1$value < k2$value){
-  print(paste("One knot is better than two, found using knots at",toString(k1$par)))
+if (k1_19$value < k2_19$value){
+  print(paste("One knot is better than two, found using knots at",toString(k1_19$par)))
 } else {
-  print(paste("Two knots are better than one, found using knots at",toString(k2$par)))
+  print(paste("Two knots are better than one, found using knots at",toString(k2_19$par)))
 }
