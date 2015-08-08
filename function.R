@@ -1120,7 +1120,9 @@ plotmse <- function(data){
   lines(data$msearims2,col=colz[3])
   lines(data$msearimsp12,col=colz[4])
   title(main="Mean Squared Error of Models")
+
   legend("topright",inset=c(-0.35,0), legend=c("Pickup","Arima PH","Arima PH k=1","Arima PH k=2"),col=colz,pch=19)
+
 }
 
 ##########################################################
