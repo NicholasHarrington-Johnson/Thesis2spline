@@ -823,6 +823,94 @@ fpickup <- function(P,h=7){
   return(fb_t0)
 }
 
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+
+arimaphf <- function(P,h=7){
+  ## This function outputs a forecast with horizon h using an arima model with public holidays data
+  ## No additional bookings information is included in this model
+  
+  tri <- P[1:(nrow(P)-h),]
+  tri$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[2]-(h/365)),frequency=365)
+  
+  totpeople <- tri$b_t0
+  
+  tsp(totpeople) <- tsp(tri$pubd)
+  
+  # Creating log of data with weekly frequency
+  
+  logpeople <- ts(log(totpeople+1), start=1, frequency=7)
+  
+  # Create x regressor public holiday dummies
+  
+  xdums <- cbind(as.numeric(tri$pubd),as.numeric(tri$pubi),as.numeric(tri$pubny))
+  
+  colnames(xdums) <- c("going down","going up","ny")
+  
+  # Change public holiday dates to numeric
+  nphols <- as.numeric(as.timeDate(phols$Date))
+  
+  # Create time series public holiday variable with appropriate dimensions
+  # Dimensions - 2011 - 2015
+  pholt <- as.numeric(seq(as.Date("2011-01-01"),as.Date("2015-12-31"),by="1 day"))
+  
+  ispubh <- ts(pholt %in% phols, start=2011, frequency=365)
+  
+  # Dimensions - start when y series ends
+  endw <- tail(time(totpeople),n=h+1)
+  
+  ## end window for remaining forecasts
+  enddata <- tail(time(P$pubd),n=1)
+  
+  fispubh <- window(ispubh,start=endw[[1]]+(1/365),end=enddata)
+  # Public Holidays with suspected decreases
+  fpubd <- nphols[which(phols$Holiday=="1")]
+  fpubd <- ts(as.numeric(pholt %in% fpubd), start=2011,frequency = 365)
+  # Begin at end[[1]] of y series
+  fpubd <- window(fpubd,start=endw[[1]]+(1/365),end=enddata)
+  # Public Holidays with suspected increases
+  fpubi <- nphols[which(phols$Holiday=="2")]
+  fpubi <- ts(as.numeric(pholt %in% fpubi), start=2011,frequency = 365)
+  # Begin at end[[1]] of y series
+  fpubi <- window(fpubi,start=endw[[1]]+(1/365),end=enddata)
+  # New Years Eve - suspected increases
+  fpubny <- nphols[which(phols$Holiday=="3")]
+  fpubny <- ts(as.numeric(pholt %in% fpubny),start=2011,frequency = 365)
+  # Begin at end[[1]] of y series
+  fpubny <- window(fpubny,start=endw[[1]]+(1/365),end=enddata)
+  
+  # Create matrix of public holidays for forecasting
+  
+  xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny))
+  
+  colnames(xfor) <- c("going down","going up","ny")
+  
+  #########################################################
+  
+  fit2 <- auto.arima(logpeople, xreg=xdums)
+  
+  # Arima fit2 forecast
+  
+  fc2 <- forecast(fit2,xreg=xfor[1:h,], h=h)
+  fc2$mean <- exp(fc2$mean)-1
+  fc2$lower <- exp(fc2$lower)-1
+  fc2$upper <- exp(fc2$upper)-1
+  fc2$x <- ts(tri$b_t0,frequency=365)
+  tsp(fc2$x)<-tsp(tri$pubd)
+  fc2$x <- window(fc2$x,end=tsp(tri$pubd)[2])
+  fc2$x <- window(fc2$x,start=tsp(tri$pubd)[1])
+  fc2$mean <- ts(fc2$mean, start = tsp(fc2$x)[2]+1/365, frequency=365)
+  tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
+  plot(fc2,main=paste("Arima model with public holidays and bookings (h=",toString(h),")"))
+  return(fc2)
+  
+  
+}
+
 
 ##########################################################
 ##########################################################
