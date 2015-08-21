@@ -24,7 +24,9 @@ r <- clean(eztable)
 ## Truncating data
 
 tr <- truncatep(r)
+save(tr,file="truncated_data.Rda")
 
+load("truncated_data.Rda")
 ## Plotting
 
 for(i in numr)

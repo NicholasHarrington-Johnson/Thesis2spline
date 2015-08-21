@@ -847,9 +847,22 @@ arimaphf <- function(P,h=7){
   
   # Create x regressor public holiday dummies
   
-  xdums <- cbind(as.numeric(tri$pubd),as.numeric(tri$pubi),as.numeric(tri$pubny))
+  xdums <- NULL
+  excludeph <- rep(TRUE,3)
+  if(sum(tri$pubny>0.5)){
+    xdums <- cbind(as.numeric(tri$pubny),xdums)
+    excludeph[3] <- FALSE
+  }
   
-  colnames(xdums) <- c("going down","going up","ny")
+  if(sum(tri$pubi>0.5)){
+    xdums <- cbind(as.numeric(tri$pubi),xdums)
+    excludeph[2] <- FALSE
+  }
+  
+  if(sum(tri$pubd>0.5)){
+    xdums <- cbind(as.numeric(tri$pubd),xdums)
+    excludeph[1] <- FALSE
+  }
   
   # Change public holiday dates to numeric
   nphols <- as.numeric(as.timeDate(phols$Date))
@@ -872,22 +885,41 @@ arimaphf <- function(P,h=7){
   fpubd <- ts(as.numeric(pholt %in% fpubd), start=2011,frequency = 365)
   # Begin at end[[1]] of y series
   fpubd <- window(fpubd,start=endw[[1]]+(1/365),end=enddata)
+  
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[1]==TRUE){
+    fpubd <- NULL
+  }
+  
   # Public Holidays with suspected increases
   fpubi <- nphols[which(phols$Holiday=="2")]
   fpubi <- ts(as.numeric(pholt %in% fpubi), start=2011,frequency = 365)
   # Begin at end[[1]] of y series
   fpubi <- window(fpubi,start=endw[[1]]+(1/365),end=enddata)
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[2]==TRUE){
+    fpubi <- NULL
+  }
+  
   # New Years Eve - suspected increases
   fpubny <- nphols[which(phols$Holiday=="3")]
   fpubny <- ts(as.numeric(pholt %in% fpubny),start=2011,frequency = 365)
   # Begin at end[[1]] of y series
   fpubny <- window(fpubny,start=endw[[1]]+(1/365),end=enddata)
   
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[3]==TRUE){
+    fpubny <- NULL
+  }
+  
   # Create matrix of public holidays for forecasting
   
   xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny))
   
-  colnames(xfor) <- c("going down","going up","ny")
+  #colnames(xfor) <- c("going down","going up","ny")
   
   #########################################################
   
@@ -927,7 +959,11 @@ arimaspline <- function(P,h=7,k=1){
   
   # Estimating a cubic spline
   
-  totspline <- ns(P[,(h+1)],df=1+k)
+  # Enforcing knot positions that ignore zeros - applying knots at zero errors
+  
+  tmp_knots <- quantile(P[,(h+1)][P[,(h+1)]>0],prob=((1:k)/(k+1)))
+  
+  totspline <- ns(P[,(h+1)],knots=tmp_knots)
   
   # Removing the last h observations of the spline
   
@@ -946,11 +982,23 @@ arimaspline <- function(P,h=7,k=1){
   logpeople <- ts(log(totpeople+1), start=1, frequency=7)
   
   # X regressor public holiday dummies and spline variables
+  xdums <- cbind(totsplinex)
+  excludeph <- rep(TRUE,3)
+  if(sum(tri$pubny>0.5)){
+    xdums <- cbind(as.numeric(tri$pubny),xdums)
+    excludeph[3] <- FALSE
+  }
   
-  xdums <- cbind(as.numeric(tri$pubd),as.numeric(tri$pubi),as.numeric(tri$pubny),totsplinex)
+  if(sum(tri$pubi>0.5)){
+    xdums <- cbind(as.numeric(tri$pubi),xdums)
+    excludeph[2] <- FALSE
+  }
   
-  #colnames(xdums) <- c("going down","going up","ny")
-  
+  if(sum(tri$pubd>0.5)){
+    xdums <- cbind(as.numeric(tri$pubd),xdums)
+    excludeph[1] <- FALSE
+  }
+
   # Change public holiday dates to numeric
   nphols <- as.numeric(as.timeDate(phols$Date))
   
@@ -971,35 +1019,62 @@ arimaspline <- function(P,h=7,k=1){
   fispubh <- window(ispubh,start=endw[[1]]+(1/365),end=enddata)
   # Public Holidays with suspected decreases
   fpubd <- nphols[which(phols$Holiday=="1")]
-  fpubd <- ts(as.numeric(pholt %in% fpubd), start=2011,frequency = 365)
+  fpubd <- ts(as.numeric(pholt %in% fpubd), start=2011,frequency = 365)    
   # Begin at end[[1]] of y series
   fpubd <- window(fpubd,start=endw[[1]]+(1/365),end=enddata)
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[1]==TRUE){
+    fpubd <- NULL
+  }
+  
   # Public Holidays with suspected increases
   fpubi <- nphols[which(phols$Holiday=="2")]
   fpubi <- ts(as.numeric(pholt %in% fpubi), start=2011,frequency = 365)
   # Begin at end[[1]] of y series
   fpubi <- window(fpubi,start=endw[[1]]+(1/365),end=enddata)
+  
+  # Exclude from forecast if omitted from regression
+  if (excludeph[2]==TRUE){
+    fpubi <- NULL
+  }
+  
   # New Years Eve - suspected increases
   fpubny <- nphols[which(phols$Holiday=="3")]
   fpubny <- ts(as.numeric(pholt %in% fpubny),start=2011,frequency = 365)
   # Begin at end[[1]] of y series
   fpubny <- window(fpubny,start=endw[[1]]+(1/365),end=enddata)
   
+  # Exclude from forecast if omitted from regression
+  if (excludeph[3]==TRUE){
+    fpubny <- NULL
+  }
+  
   # Spline Forecast Variable
   
-  splinef <- tail(totspline,n=h)
+  splinef <- totspline[(nrow(totsplinex)+1):(nrow(totsplinex)+h),]
   
   # Create matrix of public holidays for forecasting
-  
-  xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),splinef)
-  
+  if (h==1){
+    if (k==1){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1]),c(splinef[2]))
+    } else if (k==2){
+      xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1]),c(splinef[2]),c(splinef[3]))
+    } 
+  } else if (h>1){  
+  if (k==1){
+    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]))
+  } else if (k==2){
+    xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]))
+  }
+  }
   #########################################################
   
   fit2 <- auto.arima(logpeople, xreg=xdums)
   
   # Arima fit2 forecast
   
-  fc2 <- forecast(fit2,xreg=xfor[1:h,], h=h)
+  fc2 <- forecast(fit2,xreg=xfor, h=h)
   fc2$mean <- exp(fc2$mean)-1
   fc2$lower <- exp(fc2$lower)-1
   fc2$upper <- exp(fc2$upper)-1
@@ -1022,7 +1097,7 @@ arimaspline <- function(P,h=7,k=1){
 ##########################################################
 ##########################################################
 
-mseevaluate <- function(P,starttraining=200,h=7){
+mseevaluate <- function(P,starttraining=100,h=7){
   
   ## This function evaluates the mean squared error of various models and outputs the best performing model
   ## This function also outputs the actual mean squared errors as size of the training set increases
@@ -1123,6 +1198,26 @@ plotmse <- function(data){
 
   legend("topright",inset=c(-0.35,0), legend=c("Pickup","Arima PH","Arima PH k=1","Arima PH k=2"),col=colz,pch=19)
 
+}
+
+##########################################################
+##########################################################
+#################### End of Function #####################
+##########################################################
+##########################################################
+
+splinefcwdiag <- function(P,h,k=1){
+  ## This function ensures that an h step arima forecast with splines is taking splines from the correct b_tj
+  ## An h step forecast will take splines from b_t(1:h) for a forecast of length h
+  
+  fc <- rep(0,h)
+  
+  for (j in 1:h){
+    fc[j] <-arimaspline(P,j,k)$mean[j]
+  }   
+  
+  fc <- rev(fc)
+  return(fc)
 }
 
 ##########################################################
