@@ -1135,9 +1135,9 @@ mseevaluate <- function(P,starttraining=50,h=7){
     
     arim2 <- arimaphf(tot)
     
-    arims2 <- arimaspline(tot)
+    arims2 <- splinefcwdiag(tot,h)
     
-    arimsp12 <- arimaspline(tot,k=2)
+    arimsp12 <- splinefcwdiag(tot,h,k=2)
     
     msepick2[(size-starttraining+1)] <- sum((pick2 - test$b_t0)^2)
     
