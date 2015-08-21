@@ -1070,6 +1070,12 @@ arimaspline <- function(P,h=7,k=1){
   }
   #########################################################
   
+  ## Before fitting remove 0s from logpeople data
+  logpeople[logpeople<1]<-NA
+  # Autoarima should handle this
+  
+  #########################################################
+  
   fit2 <- auto.arima(logpeople, xreg=xdums)
   
   # Arima fit2 forecast
@@ -1097,12 +1103,11 @@ arimaspline <- function(P,h=7,k=1){
 ##########################################################
 ##########################################################
 
-mseevaluate <- function(P,starttraining=100,h=7){
+mseevaluate <- function(P,starttraining=50,h=7){
   
   ## This function evaluates the mean squared error of various models and outputs the best performing model
   ## This function also outputs the actual mean squared errors as size of the training set increases
   
-  # There is some issue with starttraining not being large enough for some of the arima models, this ranges from 200 - 350
   # This code takes some time to run
   
   bmod <- rep(0,4)
