@@ -845,21 +845,42 @@ arimaphf <- function(P,h=7){
   
   logpeople <- ts(log(totpeople+1), start=1, frequency=7)
   
+  #########################################################
+  
+  ## Before fitting remove 0s from logpeople data
+  logpeople[logpeople<1]<-NA
+  # Autoarima should handle this
+  
   # Create x regressor public holiday dummies
   
   xdums <- NULL
   excludeph <- rep(TRUE,3)
-  if(sum(tri$pubny>0.5)){
+  ## We must remove the public holiday regressors if:
+  # They only occur on days when logpeople is NA
+  # OR
+  # They sum to zero
+  
+  pnyna <- tri$pubny
+  pnyna[is.na(logpeople)]<-NA
+  
+  if(sum(pnyna>0.5,na.rm=TRUE)){
+    tri$pubny[is.na(logpeople)]<-NA
     xdums <- cbind(as.numeric(tri$pubny),xdums)
     excludeph[3] <- FALSE
   }
   
-  if(sum(tri$pubi>0.5)){
+  pina <- tri$pubi
+  pina[is.na(logpeople)]<-NA
+  
+  if(sum(pina>0.5,na.rm=TRUE)){
     xdums <- cbind(as.numeric(tri$pubi),xdums)
     excludeph[2] <- FALSE
   }
   
-  if(sum(tri$pubd>0.5)){
+  pdna <- tri$pubd
+  pdna[is.na(logpeople)]<-NA
+  
+  if(sum(pdna>0.5,na.rm=TRUE)){
     xdums <- cbind(as.numeric(tri$pubd),xdums)
     excludeph[1] <- FALSE
   }
@@ -937,7 +958,9 @@ arimaphf <- function(P,h=7){
   fc2$x <- window(fc2$x,start=tsp(tri$pubd)[1])
   fc2$mean <- ts(fc2$mean, start = tsp(fc2$x)[2]+1/365, frequency=365)
   tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
-  plot(fc2,main=paste("Arima model with public holidays and bookings (h=",toString(h),")"))
+  fcplot <- fc2
+  fcplot[is.na(fcplot)]<-0
+  plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima model with public holidays and bookings"))
   return(fc2)
   
   
@@ -981,21 +1004,45 @@ arimaspline <- function(P,h=7,k=1){
   
   logpeople <- ts(log(totpeople+1), start=1, frequency=7)
   
+  #########################################################
+  
+  ## Before fitting remove 0s from logpeople data
+  logpeople[logpeople<1]<-NA
+  # Autoarima should handle this
+  
+  #########################################################
+  
   # X regressor public holiday dummies and spline variables
   xdums <- cbind(totsplinex)
   excludeph <- rep(TRUE,3)
-  if(sum(tri$pubny>0.5)){
+  
+  ## We must remove the public holiday regressors if:
+  # They only occur on days when logpeople is NA
+  # OR
+  # They sum to zero
+  
+  pnyna <- tri$pubny
+  pnyna[is.na(logpeople)]<-NA
+  
+  if(sum(pnyna>0.5,na.rm=TRUE)){
+    tri$pubny[is.na(logpeople)]<-NA
     xdums <- cbind(as.numeric(tri$pubny),xdums)
     excludeph[3] <- FALSE
   }
   
-  if(sum(tri$pubi>0.5)){
+  pina <- tri$pubi
+  pina[is.na(logpeople)]<-NA
+  
+  if(sum(pina>0.5,na.rm=TRUE)){
     xdums <- cbind(as.numeric(tri$pubi),xdums)
     excludeph[2] <- FALSE
   }
   
-  if(sum(tri$pubd>0.5)){
-    xdums <- cbind(as.numeric(tri$pubd),xdums)
+  pdna <- tri$pubd
+  pdna[is.na(logpeople)]<-NA
+  
+  if(sum(pdna>0.5,na.rm=TRUE)){
+        xdums <- cbind(as.numeric(tri$pubd),xdums)
     excludeph[1] <- FALSE
   }
 
@@ -1067,13 +1114,7 @@ arimaspline <- function(P,h=7,k=1){
   } else if (k==2){
     xfor <- cbind(as.numeric(fpubd),as.numeric(fpubi),as.numeric(fpubny),c(splinef[1:h,1]),c(splinef[1:h,2]),c(splinef[1:h,3]))
   }
-  }
-  #########################################################
-  
-  ## Before fitting remove 0s from logpeople data
-  logpeople[logpeople<1]<-NA
-  # Autoarima should handle this
-  
+  }  
   #########################################################
   
   fit2 <- auto.arima(logpeople, xreg=xdums)
@@ -1090,7 +1131,9 @@ arimaspline <- function(P,h=7,k=1){
   fc2$x <- window(fc2$x,start=tsp(tri$pubd)[1])
   fc2$mean <- ts(fc2$mean, start = tsp(fc2$x)[2]+1/365, frequency=365)
   tsp(fc2$upper) <- tsp(fc2$lower) <- tsp(fc2$mean)
-  plot(fc2,main=paste("Arima model with public holidays and bookings (h=",toString(h),")"))
+  fcplot <- fc2
+  fcplot[is.na(fcplot)]<-0
+  plot(fcplot,ylim=range(totpeople,na.rm=TRUE),main=paste(toString(h)," step Arima spline model with ",toString(k)," knots"))
   return(fc2)
   
   
@@ -1143,9 +1186,9 @@ mseevaluate <- function(P,starttraining=50,h=7){
     
     msearim2[(size-starttraining+1)] <- sum((arim2$mean - test$b_t0)^2)
     
-    msearims2[(size-starttraining+1)] <- sum((arims2$mean - test$b_t0)^2)
+    msearims2[(size-starttraining+1)] <- sum((arims2 - test$b_t0)^2)
     
-    msearimsp12[(size-starttraining+1)] <- sum((arimsp12$mean - test$b_t0)^2)
+    msearimsp12[(size-starttraining+1)] <- sum((arimsp12 - test$b_t0)^2)
     
     mse <- c(msepick2[(size-starttraining+1)],msearim2[(size-starttraining+1)],msearims2[(size-starttraining+1)],msearimsp12[(size-starttraining+1)])
     
