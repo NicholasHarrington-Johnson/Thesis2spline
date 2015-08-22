@@ -1152,28 +1152,39 @@ mseevaluate <- function(P,starttraining=50,h=7){
   ## This function also outputs the actual mean squared errors as size of the training set increases
   
   # This code takes some time to run
-  
+  ##
   bmod <- rep(0,4)
   names(bmod) <- c("Pickup","Arima with Public Holidays","Arima with Public Holidays and k=1","Arima with Public Holidays and k=2")
+  
+  ##
   msepick2 <- rep(0,((nrow(P)-h)-starttraining))
   msearim2 <- msepick2
   msearims2 <- msepick2
   msearimsp12 <- msepick2
   
+  ##
+  coln <- rep(NA,h)
+  for (i in 1:h){
+    coln[i]<- paste("h=",toString(i),sep="")
+  }
+  hmse <- data.frame(matrix(0,nrow=4,ncol=h),row.names=c("Pickup","ARIMA","ARIMA_1_knot","ARIMA_2_knot"))
+  colnames(hmse)<-coln
+  ##
   len <- nrow(P)-h
   numit <- len - starttraining
   
   for (size in starttraining:len){
-    
+    write.table(size,"Trainingset.txt")
     tot <- head(P,n=size+h)
     tot$pubd <- window(P$pubd,start=tsp(P$pubd)[1],end=(tsp(P$pubd)[1]+((size+h-1)/365)),frequency=365)
     
     #training <- head(tot,n=size)
     #training$pubd <- window(tot$pubd,start=tsp(tot$pubd)[1],end=(tsp(tot$pubd)[1]+((size-1)/365)),frequency=365)
-    
+    # Making test set
     test <- tail(tot,n=h)
     test$pubd <- window(tot$pubd,start=(tsp(tot$pubd)[1]+((size)/365)),end=tsp(tot$pubd)[2],frequency=365)
     
+    # Running models
     pick2 <- fpickup(tot)
     
     arim2 <- arimaphf(tot)
@@ -1181,6 +1192,8 @@ mseevaluate <- function(P,starttraining=50,h=7){
     arims2 <- splinefcwdiag(tot,h)
     
     arimsp12 <- splinefcwdiag(tot,h,k=2)
+    
+    # Getting mse overall
     
     msepick2[(size-starttraining+1)] <- sum((pick2 - test$b_t0)^2)
     
@@ -1202,6 +1215,19 @@ mseevaluate <- function(P,starttraining=50,h=7){
       bmod <- bmod + c(0,0,0,1)
     }
     
+    ## Getting mse by h steps
+    # Pickup
+    hmse[1,]<-hmse[1,]+(pick2 - test$b_t0)^2
+    # ARIMA
+    hmse[2,]<-hmse[2,]+((arim2$mean[1:h] - test$b_t0)^2)
+    # ARIMA 1 knot
+    hmse[3,]<-hmse[3,]+(arims2 - test$b_t0)^2
+    # ARIMA 2 knot
+    hmse[4,]<-hmse[4,]+(arimsp12 - test$b_t0)^2
+    
+    
+    ## Print counter
+    
     if (size == (ceiling(numit/5)+starttraining)){
       print("20% complete")
     }
@@ -1221,7 +1247,7 @@ mseevaluate <- function(P,starttraining=50,h=7){
   }
   mses <- data.frame(msepick2,msearim2,msearims2,msearimsp12)
   bmod <- bmod/numit
-  obj <- list(bmod,mses)
+  obj <- list(bmod,mses,hmse)
   return(obj)
 }
 
